@@ -12,33 +12,25 @@ using namespace std;
 // Estados para a Busca em Profundidade (DFS)
 enum EstadoDFS { NAO_VISITADO, VISITADO, COMPLETO };
 
-// Estrutura para representar cada Atividade (Vértice do Grafo)
-struct Atividade {
-    string id;              // Identificador da Atividade
-    int duracao;            // Duração da Atividade
 
-    // Tempos de Início e Fim (Cedo)
+struct Atividade { // Cada vertice será uma atividade
+    string id;              
+    int duracao;            
+
     int ES = 0;             // Early Start 
     int EF = 0;             // Early Finish 
     
-    // Tempos de Início e Fim (Tarde) - Inicialização com valor máximo
     int LS = numeric_limits<int>::max(); 
     int LF = numeric_limits<int>::max(); 
 
-    // Folga (Slack/Float)
     int folga = 0;
 
-    // Relações de Precedência e Sucessão
     vector<string> precedentes; 
     vector<string> sucessores;  
     
-    // Campo para o DFS
     EstadoDFS estado = NAO_VISITADO;
 };
 
-// =========================================================
-// FUNÇÕES DE CONSTRUÇÃO E ORDENAÇÃO TOPOLÓGICA (DFS)
-// =========================================================
 
 void construirGrafo(map<string, Atividade>& atividades, const vector<tuple<string, int, string>>& dados) {
     // 1. Criar as atividades com duração e precedentes
@@ -59,7 +51,7 @@ void construirGrafo(map<string, Atividade>& atividades, const vector<tuple<strin
         }
     }
 
-    // 2. Definir os sucessores (para facilitar o Backward Pass)
+    // 2. Definir os sucessores (para facilitar a volta)
     for (auto const& pair : atividades) {
         const string& id = pair.first;
         for (const string& prec_id : pair.second.precedentes) {
@@ -73,7 +65,7 @@ void construirGrafo(map<string, Atividade>& atividades, const vector<tuple<strin
 // Função Recursiva DFS para Ordenação Topológica
 bool dfsTopologicalSort(const string& id, map<string, Atividade>& atividades, vector<string>& ordem_topologica) {
     Atividade& ativ = atividades.at(id);
-    ativ.estado = VISITADO; // Marca como 'VISITADO' (em processamento)
+    ativ.estado = VISITADO;
 
     for (const string& sucessor_id : ativ.sucessores) {
         if (atividades.count(sucessor_id)) {
@@ -94,7 +86,7 @@ bool dfsTopologicalSort(const string& id, map<string, Atividade>& atividades, ve
     }
 
     ativ.estado = COMPLETO; 
-    ordem_topologica.push_back(id); // Adiciona ao início da lista (Reverse DFS)
+    ordem_topologica.push_back(id); // Adiciona ao início da lista
     return true; 
 }
 
@@ -122,11 +114,8 @@ bool realizarOrdenacaoTopologica(map<string, Atividade>& atividades, vector<stri
     return true;
 }
 
-// =========================================================
-// FUNÇÕES DE CÁLCULO PERT/CPM
-// =========================================================
 
-// 1. Forward Pass: Calcula Early Start (ES) e Early Finish (EF)
+// 1. Ida: Calcula ES e EF
 void forwardPass(map<string, Atividade>& atividades, const vector<string>& ordem_topologica) {
     for (const string& id : ordem_topologica) {
         Atividade& ativ = atividades.at(id);
@@ -147,7 +136,7 @@ void forwardPass(map<string, Atividade>& atividades, const vector<string>& ordem
     }
 }
 
-// 2. Backward Pass: Calcula Late Start (LS), Late Finish (LF) e Folga
+// 2. Volta: Calcula LS, LF e Folga
 void backwardPass(map<string, Atividade>& atividades, const vector<string>& ordem_topologica, int duracao_projeto) {
     // Itera sobre a ordem topológica de trás para frente
     for (auto it = ordem_topologica.rbegin(); it != ordem_topologica.rend(); ++it) {
@@ -174,13 +163,12 @@ void backwardPass(map<string, Atividade>& atividades, const vector<string>& orde
     }
 }
 
-// Função principal de execução do PERT/CPM (Formato C++11/C++14)
-// Usa bool& sucesso para sinalizar se um ciclo foi detectado.
+
 vector<string> calcularPERT_CPM_Legacy(map<string, Atividade>& atividades, bool& sucesso) {
     vector<string> ordem_topologica;
     sucesso = true; 
 
-    // 1. Ordenação Topológica com DFS
+    // Ordenação Topológica com DFS
     if (!realizarOrdenacaoTopologica(atividades, ordem_topologica)) {
         cout << "\nERRO: O cálculo PERT/CPM não pode ser completado devido a um ciclo no projeto." << endl;
         sucesso = false; 
@@ -192,10 +180,9 @@ vector<string> calcularPERT_CPM_Legacy(map<string, Atividade>& atividades, bool&
     }
     cout << endl;
 
-    // 2. Forward Pass
     forwardPass(atividades, ordem_topologica);
 
-    // 3. Determinar a Duração do Projeto
+    // Determinar a Duração do Projeto
     int duracao_projeto = 0;
     for (auto const& pair : atividades) {
         if (pair.second.sucessores.empty()) {
@@ -204,15 +191,12 @@ vector<string> calcularPERT_CPM_Legacy(map<string, Atividade>& atividades, bool&
     }
     cout << "--- Duração Mínima do Projeto: " << duracao_projeto << endl;
 
-    // 4. Backward Pass
+
     backwardPass(atividades, ordem_topologica, duracao_projeto);
 
     return ordem_topologica; 
 }
 
-// =========================================================
-// FUNÇÕES DE EXIBIÇÃO
-// =========================================================
 
 void exibirResultado(const map<string, Atividade>& atividades, const vector<string>& ordem_topologica) {
     cout << "\n## Resultados do PERT/CPM\n";
@@ -247,10 +231,6 @@ void exibirResultado(const map<string, Atividade>& atividades, const vector<stri
     cout << endl;
 }
 
-// =========================================================
-// FUNÇÃO MAIN
-// =========================================================
-
 int main() {
     // Tabela de Atividades, Duração e Precedentes:
     // Formato: {ID, Duração, Precedentes_IDs (separados por vírgula, use "-" se nenhum)}
@@ -273,22 +253,20 @@ int main() {
 
     map<string, Atividade> atividades;
 
-    // 1. Construir o Grafo
+
     construirGrafo(atividades, dados_projeto);
     cout << "Grafo de Atividades Construido." << endl;
 
-    // 2. Calcular PERT/CPM (Compatível com G++ 6.3)
+
     bool calculo_ok;
     vector<string> ordem_topologica = calcularPERT_CPM_Legacy(atividades, calculo_ok);
 
     if (calculo_ok) {
-        // 3. Exibir Resultados
         exibirResultado(atividades, ordem_topologica);
     }
 
-    // Para compilar com g++ 6.3, use o comando:
-    // g++ -std=c++11 nome_do_arquivo.cpp -o programa
-    // (Ou -std=c++14)
+    // Para compilar, use o comando:
+    // g++ -o programa g.c++
 
     return 0;
 }
